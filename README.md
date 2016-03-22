@@ -36,7 +36,7 @@ $ git push origin master
 
 - Now, everything is on your local machine. You can modify the code and push them to your own remote repository. 
 
-	- Pull the code 
+	- Pull the code
 	```sh
 	$ git pull
 	```

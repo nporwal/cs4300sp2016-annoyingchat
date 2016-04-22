@@ -2,6 +2,7 @@
     <head>
         <link rel="stylesheet" href="/static/bootstrap.min.css">
         <link rel="stylesheet" href="/static/main.css">
+        <link rel="shortcut icon" type="image/png" href="/static/favicon.ico"/>
     </head>
     
     <body>
@@ -25,11 +26,16 @@
             <div class="form-group">
                 <div style="position: absolute; right: 25; top: 120; text-align: right">
                     <strong>Use Algorithm:</strong><br>
-
+                    {% if algorithm == '' or algorithm == 'random' %}
+                        Random <input type="radio" name="algorithm" value="random" autocomplete='on' checked><br>
+                        Trivial <input type="radio" name="algorithm" value="trivial" autocomplete='on'><br>
+                    {% elif algorithm == 'trivial' %}
+                        Random <input type="radio" name="algorithm" value="random" autocomplete='on'><br>
+                        Trivial <input type="radio" name="algorithm" value="trivial" autocomplete='on' checked><br>
+                    {% endif %}
                     
 
-                    Random <input type="radio" name="algorithm" value="random" autocomplete='on'  checked><br>
-                    Trivial <input type="radio" name="algorithm" value="trivial" autocomplete='on'><br>
+                    
                     <!-- Final <input type="radio" name="algorithm" value="final"><br> -->
                 </div>
                 <input id="input" type="text" name="search" class="form-control" placeholder="Your Input">

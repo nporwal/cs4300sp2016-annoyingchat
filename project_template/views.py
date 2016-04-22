@@ -4,16 +4,23 @@ from django.http import HttpResponse
 from .models import Docs
 from django.template import loader
 from .form import QueryForm
-from .test import find_similar
+from .test import find_random, find_similar, find_final
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 # Create your views here.
 def index(request):
     output_list = ''
     output=''
+    algorithm = ''
     if request.GET.get('search'):
         search = request.GET.get('search')
-        output_list = find_similar(search)
+        algorithm = request.GET.get('algorithm')
+        if algorithm == "random":
+            output_list = find_random(search)
+        elif algorithm == "trivial":            
+            output_list = find_similar(search)
+        elif algorithm == "final":
+            output_list = find_final(search)
         paginator = Paginator(output_list, 10)
         page = request.GET.get('page')
         try:
@@ -24,5 +31,6 @@ def index(request):
             output = paginator.page(paginator.num_pages)
     return render_to_response('project_template/index.html', 
                           {'output': output,
+                           'algorithm' : algorithm,
                            'magic_url': request.get_full_path(),
                            })

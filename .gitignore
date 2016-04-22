@@ -14,3 +14,4 @@ media
 .idea/*
 .DS_Store
 env/*
+mysite/settings.py

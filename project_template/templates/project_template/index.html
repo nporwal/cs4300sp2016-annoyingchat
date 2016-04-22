@@ -7,26 +7,31 @@
     <body>
         <!-- TODO: Please change lines 10 and 11 according to your actual project name and student names-->
         <div class="topcorner">
-            <p>Annoying Chat</p>
-            <p>Chi Wei Zhang (cz222)</p>
-            <p>Nicole Felty (njf53)</p>
-            <p>Nishit Porwal (nap72)</p>
-            <p>Alin Barsan (ab973)</p>
+            <p>
+                Chi Wei Zhang (cz222)<br>
+                Nicole Felty (njf53)<br>
+                Nishit Porwal (nap72)<br>
+                Alin Barsan (ab973)</p>
         </div>
         
         <form class="form-inline global-search" method='GET'>
             <h1 style="font-size: 55px; font-family:Futura; color: #4285F4">
-                C
-                <font color=#EA4335>S</font>
-                <font color=#FBBC05>4</font>
-                3
-                <font color=#34A853>0</font>
-                <font color=#EA4335>0</font>
+                Annoying
+                <font color=#EA4335>Chat</font>
             </h1>
             
             <br><br>
             
             <div class="form-group">
+                <div style="position: absolute; right: 25; top: 100; text-align: right">
+                    <strong>Use Algorithm:</strong><br>
+
+                    USE IF STATEMENT AND ALGORITHM VARIABLE TO PERSIST BUTTON CHECK MARK
+
+                    Random <input type="radio" name="algorithm" value="random" autocomplete='on'  checked><br>
+                    Trivial <input type="radio" name="algorithm" value="trivial" autocomplete='on'><br>
+                    <!-- Final <input type="radio" name="algorithm" value="final"><br> -->
+                </div>
                 <input id="input" type="text" name="search" class="form-control" placeholder="Your Input">
             </div>
             <button type="submit" class="btn btn-info"> Go! </button>
@@ -35,16 +40,17 @@
         <div class="form-inline global-search">
             <h4>Output</h4><br>
             {% for line in output %}
-                {{line}}<br>
+                <br>{{line}}<br>
             {% endfor %}
             
+            <!--
             <div class="pagination">
                 <span class="step-links">
                     {% if output.has_previous %}
                     <a href= "{{magic_url}}&page={{ output.previous_page_number }}">previous</a>
                     {% endif %}
                     
-                    <!-- Showing the page numbers in Html Page -->
+                    
                     <span class="current">
                     Page _{{ output.number }}_ of _{{ output.paginator.num_pages }}_
                     </span>
@@ -54,6 +60,7 @@
                     {% endif %}
                 </span>
             </div>
+            -->
         </div>
     </body>
 </html>

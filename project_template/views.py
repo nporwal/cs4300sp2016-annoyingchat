@@ -11,6 +11,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 def index(request):
     output_list = ''
     output=''
+    algorithm = ''
     if request.GET.get('search'):
         search = request.GET.get('search')
         algorithm = request.GET.get('algorithm')

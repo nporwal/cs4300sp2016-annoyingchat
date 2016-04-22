@@ -12,8 +12,8 @@ def read_file(path):
 	return transcripts
 
 def find_random(q):
-	quotes = read_file("jsons/new_quotes.json")
-	movies = read_file("jsons/new_movies.json")
+	quotes = read_file("jsons/quotes.json")
+	movies = read_file("jsons/movies.json")
 	result = []
 	r = random.randint(0,len(quotes))
 	result.append(quotes[r] + " - \"" + movies[r] + "\"")

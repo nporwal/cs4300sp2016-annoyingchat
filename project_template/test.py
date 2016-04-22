@@ -20,7 +20,7 @@ def find_random(q):
 	return result
 
 def find_similar(q):
-	return ["trivial algorithm placeholder"]
+	return ["trivial algorithm placeholder response"]
 
 def find_final(q):
-	return ["final algorithm placeholder"]
+	return ["final algorithm placeholder response"]

@@ -12,6 +12,8 @@ from collections import defaultdict
 # Download NLTK stopwords if you haven't already
 # nltk.download()
 
+# Set nltk data directory to local project nltk_data
+nltk.data.path.append('nltk_data/')
 
 def read_file(path):
     # path = Docs.objects.get(id = n).address;

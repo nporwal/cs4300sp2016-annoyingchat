@@ -264,55 +264,21 @@ class QuoteFinder:
 
         self.context, self.quotes, self.movies = quote_pruner(self.context, self.quotes, self.movies)
 
+        self.inverted_index = read_file("jsons/f_inverted_index.json")
+        self.idf = read_file("jsons/f_idf.json")
+
         # Initialize query tokenizer
         self.tokenizer = TreebankWordTokenizer()
-        self.inverted_index = {}  # Including Stop Words
-        for context_id, context in enumerate(self.context):
-            context_tokens = self.tokenizer.tokenize(context)
-            for term in context_tokens:
-                if term in self.inverted_index:
-                    lst = self.inverted_index[term]
-                    found = False
-                    for i, tup in enumerate(lst):
-                        if context_id == tup[0]:
-                            lst[i] = (context_id, tup[1] + 1)
-                            found = True
-                    if not found:
-                        self.inverted_index[term].append((context_id, 1))
-                else:
-                    self.inverted_index[term] = [(context_id, 1)]
-
-        # Compute idf values for each term
-        self.idf = compute_idf(self.inverted_index, len(self.context))
-        # Prune out values removed by idf
-        self.inverted_index = {key: val for key, val in self.inverted_index.items() if key in self.idf}
         # Compute document norms
         self.norms = compute_doc_norms(self.inverted_index, self.idf, len(self.context))
 
-        # Check if there is a word co-occurrance file, word count file, and pmi file. if not, remake
         word_co_filename = "jsons/word_co.json"
         word_count_filename = "jsons/word_count_dict.json"
         pmi_dict_filename = "jsons/pmi_dict.json"
-        # if ((os.path.isfile(word_co_filename)) and (os.path.isfile(word_count_filename))) and (
-        # os.path.isfile(pmi_dict_filename)):
         # Read files
-        word_co = read_file(word_co_filename)
-        word_count_dict = read_file(word_count_filename)
-        pmi_dict = read_file(pmi_dict_filename)
-        # else:
-        #     # Initialize word co-occurance matrix (merge this with above cell)
-        #     # This may take a while
-        #     word_list, word_to_index = get_context_words(self.inverted_index)
-        #     word_co, word_count_dict = self.find_basic_cooccurance(word_list)
-        #     # Get PMI
-        #     pmi_dict = self.find_pmi(word_co, word_count_dict)
-        #     # Write data
-        #     with io.open("word_co.json", 'w', encoding="utf-8") as fout:
-        #         fout.write(unicode(json.dumps(word_co, ensure_ascii=False)))
-        #     with io.open("word_count_dict.json", 'w', encoding="utf-8") as fout:
-        #         fout.write(unicode(json.dumps(word_count_dict, ensure_ascii=False)))
-        #     with io.open("pmi_dict.json", 'w', encoding="utf-8") as fout:
-        #         fout.write(unicode(json.dumps(pmi_dict, ensure_ascii=False)))
+        self.word_co = read_file(word_co_filename)
+        self.word_count_dict = read_file(word_count_filename)
+        self.pmi_dict = read_file(pmi_dict_filename)
 
     def find_basic_cooccurance(self, word_list):
         """ Initialize the base word co-occurrance list from our context and quotes.
@@ -594,9 +560,10 @@ class QuoteFinder:
         for i, s in enumerate(scores):
             if self.norms[i] != 0:
                 results.append((s / (self.norms[i] * query_norm), i))
+
+        top_res_num = 5
         results.sort(reverse=True)
-        result_quotes = ["{} - \"{}\"".format(self.quotes[i], self.quotes_to_movies[self.quotes[i]]) for _, i in
-                         results]
+        result_quotes = ["{} - {}".format(self.quotes[i], self.movies[i]) for _, i in results[:top_res_num]]
         return result_quotes
 
     def find_final(self, q, rocchio=True, psuedo_rocchio_num=6, sw=False, pmi_num=10):
@@ -604,7 +571,7 @@ class QuoteFinder:
         query_tfidf, query_norm = self.query_vectorize(q, sw)
 
         if query_norm == 0:
-            return self.queries
+            return self.find_random()
 
         # Expand query using PMI
         # Use the top x number of co-occurances to expand the query

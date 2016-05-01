@@ -48,6 +48,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'project_template.ProcessExceptionMiddleware'
 )
 
 ROOT_URLCONF = 'gettingstarted.urls'

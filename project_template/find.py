@@ -280,7 +280,7 @@ class QuoteFinder:
         # Read files
         self.word_co = read_file(word_co_filename)
         self.word_count_dict = read_file(word_count_filename)
-        self.pmi_dict = read_file(pmi_dict_filename)
+        self.pmi_dict = self.find_pmi(self.word_co, self.word_count_dict)
 
     def find_basic_cooccurance(self, word_list):
         """ Initialize the base word co-occurrance list from our context and quotes.
@@ -577,7 +577,25 @@ class QuoteFinder:
 
         # Expand query using PMI
         # Use the top x number of co-occurances to expand the query
-
+        # Expand query using PMI
+        # http://www.jofcis.com/publishedpapers/2011_7_1_17_24.pdf
+        pmi_expansion = defaultdict(float)
+        pmi_norm = 1
+        for word in query_tfidf: # Sum PMI lists
+            if word in self.pmi_dict.keys():
+                pmi_list = self.pmi_dict[word][:pmi_num]
+                pmi_score_list = []
+                for word,score in pmi_list:
+                    pmi_expansion[word] += score
+                    pmi_score_list.append(score)
+                temp_norm = 0
+                for s in pmi_score_list:
+                    temp_norm += math.pow(s, 2)
+                temp_norm = math.sqrt(query_norm)
+                pmi_norm *= temp_norm
+        query_tfidf.update(pmi_expansion)
+        query_norm = query_norm * 2 * pmi_num * pmi_norm
+        
 
         # Get scores
         scores = [0 for _ in self.quotes]

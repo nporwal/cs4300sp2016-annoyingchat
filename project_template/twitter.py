@@ -18,11 +18,9 @@ def get_tweet():
 		if "ANC" in text and not (s.user.screen_name == "annoying_chat"):
 			text = text[(text.index("ANC") + len("ANC: ")):]
 			sn = s.user.screen_name
-			results = qf.find_final(text)
-			for res in results:
-				response = res[0]
-				m = "@%s %s" % (sn, response)
-				if len(m) > 140: continue
+			response = qf.find_final(text)[0][0]
+			m = "@%s %s" % (sn, response)
+			m = m[:140] if len(m) > 140 else m
 			try:				
 				s = api.update_status(m, s.id)
 				print "Found new tweet to reply to:\n%s" % text

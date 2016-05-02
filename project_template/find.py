@@ -633,5 +633,5 @@ class QuoteFinder:
         # Sort and return results
         top_res_num = 5
         results.sort(reverse=True)
-        result_quotes = ["{} - {}".format(self.quotes[i], self.movies[i]) for _, i in results[:top_res_num]]
-        return result_quotes
+        result = [[str(self.quotes[i]), str(self.movies[i]), str(self.context[i])]  for _, i in results[:top_res_num]]
+        return result

@@ -2,6 +2,9 @@
     <head>
         <link rel="stylesheet" href="/static/bootstrap.min.css">
         <link rel="stylesheet" href="/static/main.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css">
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
         <link rel="shortcut icon" type="image/png" href="/static/favicon.ico"/>
         <title>AnnoyingChat</title>
     </head>
@@ -42,17 +45,41 @@
                     {% endif %}                                      
                     
                 </div>
+                {% if search == ''%}
                 <input id="input" type="text" name="search" class="form-control" placeholder="Your Input">
+                {% else %}
+                <input id="input" type="text" name="search" class="form-control" placeholder="{{ search }}" value="{{ search }}">
+                {% endif %}
             </div>
             <button type="submit" class="btn btn-info"> Go! </button>
         </form>
+
+        <form class="form-inline global-search" style="position: absolute; left: 10; top: 10;" method='GET'>
+            <div class="form-group">
+                <input id="input" type="text" name="twitter" class="form-control" style="display:none;" value="twitter">
+            </div>
+            <button type="submit" class="btn btn-info">Update Twitter </button>
+        </form>
         
         <div class="form-inline global-search">
-            <h4>Output</h4><br>
-            {% for line in output %}
-                <br>{{line}}<br>
-            {% endfor %}
+            {% if algorithm == 'final' %}
+                {% for line in output %}
+                    <br>
+                    <div style = "width: 800; margin: 0 auto; text-align: center">
+                        <br><span style="font-size: 150%; font-weight: bold">{{line.0}}</span><br>
+                        <em>From <span style="font-size: 120%; color: blue">"{{line.1}}"</span> in response to <span style="font-size: 120%; color:green">"{{line.2}}"</span></em><br>
+                    </div>
+                {% endfor %}
+            {% else %}     
+                <h4>Output</h4><br>
+                {% for line in output %}
+                    <br>{{line}}<br>
+                {% endfor %}
+            {% endif %}
+
+
             
+
             <!--
             <div class="pagination">
                 <span class="step-links">

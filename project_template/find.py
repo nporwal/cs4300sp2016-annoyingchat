@@ -685,6 +685,6 @@ class QuoteFinder:
             else:
                 counter += 1
 
-        result_quotes = ["{} - {}".format(self.quotes[i].encode('utf-8'), self.movies[i].encode('utf-8')) for _, i in
+        result_quotes = [[self.quotes[i], self.movies[i], self.context[i]] for _, i in
                          return_res[:top_res_num]]
         return result_quotes

@@ -393,32 +393,32 @@ class QuoteFinder:
 
     def update_cooccurence(self, word_co_old, word_count_dict_old, word_list, docs):
         """ Updates the word co-occurrance mat and the word count dict with a new set of data.
-        
+
         Arguments
         =========
-    
+
         word_co_old: a word co-occurrance matrix in the form of a dictionary
-        
+
         word_count_dict_old: a dictionary that keeps track of the total occurences of a word
-        
+
         word_list: the list of words which are in our movie space
-        
+
         docs: a list of new docs we're using to update our word co-occurence
-    
+
         Returns
         =======
-        
+
         word_co, word_count_dict : new word co-occurence dict/mat and new word count dictionary
         """
         # Get English stop words
         stop_words = stopwords.words('english')
-        
+
         # Make init dict
         word_co = defaultdict(list)
         word_count_dict = defaultdict(int)
         word_co.update(word_co_old)
         word_count_dict.update(word_count_dict_old)
-        
+
         # Find co occurences in context data, based on document (content)
         for doc in docs:
             # Double loop to count word co-occurences

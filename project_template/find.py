@@ -15,6 +15,7 @@ from collections import defaultdict
 # Set nltk data directory to local project nltk_data
 nltk.data.path.append('nltk_data/')
 
+
 def read_file(path):
     # path = Docs.objects.get(id = n).address;
     # above line gives error "no such table: project_template_docs"
@@ -166,17 +167,12 @@ def quote_pruner(context, quotes, movies):
     """
     kill_sign = "asdf no good this quote is toodleloos"
     single_list = (".", "/", ":", ",", ";", "!", "?", "(", ")", '"', "-", "]", "'", "[", "#", "$",
-                   "well", "what", "why", "goodnight", "hello", "how", "no", "yes", "yep", "nope", "pick", "cigarette",
-                   "obviously", "kay", "scrappy", "good", "bad", "great", "goodbye", "who", "hoke", "yes'm", "come",
-                   "ouch", "huh", "shit", "ed", "fuck", "oh", "right", "ebay", "nothing", "me", "you", "mount", "pray",
-                   "sometimes",
-                   "really", "ditto", "jeez", "exactly", "bull", "bullshit", "yep", "bing", "38", "occupation",
-                   "pyscho", "ok",
-                   "okay", "ooh", "dance", "terrific", "cuban", "mexican", "but", "blue", "wood", "apples", "cider",
-                   "exactly",
-                   "david", "fire", "y'all", "so", "always", "hey")
-
-    index_list = []
+                  "well", "what", "why", "goodnight", "hello", "how", "no", "yes", "yep", "nope", "pick", "cigarette",
+                  "obviously", "kay", "scrappy", "good", "bad", "great", "goodbye", "who", "hoke", "yes'm", "come",
+                  "ouch", "huh", "shit", "ed", "fuck", "oh", "right", "ebay", "nothing", "me", "you", "mount", "pray", "sometimes",
+                  "really", "ditto", "jeez", "exactly", "bull", "bullshit", "yep", "bing", "38", "occupation", "pyscho", "ok",
+                  "okay", "ooh", "dance", "terrific", "cuban", "mexican", "but", "blue", "wood", "apples", "cider", "exactly",
+                  "david", "fire", "y'all", "so", "always", "hey")
 
     for x in range(len(quotes)):
         y = quotes[x].split()
@@ -186,6 +182,10 @@ def quote_pruner(context, quotes, movies):
                 context[x] = kill_sign
                 quotes[x] = kill_sign
                 movies[x] = kill_sign
+        elif len(y) == 0:
+            context[x] = kill_sign
+            quotes[x] = kill_sign
+            movies[x] = kill_sign
 
     # Remove all kill signs
     while (kill_sign in movies):
@@ -246,12 +246,82 @@ def update_word_counts(lst, word):
     return new_list
 
 
+def find_pmi(word_co, word_count_dict):
+    """ Calculate the pmi of a word based on the word co-occurences
+
+    Arguments
+    =========
+
+    word_co: a word occurrance matrix in the form of a dictionary
+
+    word_list: the list of words which are in our movie space
+
+    docs: the new docs we're using to update our word co-occurence
+
+    Returns
+    =======
+    pmi_dict = a dictionary like word_co but has the pmi's instead
+    """
+    # PMI(x,y) = log[p(x,y)/(p(x)*p(y))], assuming p(x,y) = co-occurences over total
+    pmi_dict = defaultdict(list)
+
+    # Find total
+    total = 0
+    for key in word_count_dict:
+        total += word_count_dict[key]
+
+    # Caclulate PMIs
+    for key in word_co:
+        p_x = (word_count_dict[key] + 0.0) / total
+        pmi_list = []
+        lst = word_co[key]
+        for word,co in lst:
+            p_y = (word_count_dict[word] + 0.0) / total
+            p_x_y = (co + 0.0) / total
+            res = math.log((p_x_y / (p_x * p_y)))
+            pmi_list.append((word,res))
+        pmi_list.sort(key=lambda tup:tup[1], reverse=True) # sort by second item, the pmi
+        pmi_dict[key] = pmi_list
+    return pmi_dict
+
+
+def year_rating_weight(year, rating, cosine, cur_year=2016, min_year=1925, year_weight=0.3,
+                       rating_weight=0.7, cosine_weight=0.8, y_r_weight=0.2):
+    """ Compute new score with weighting from the cosine similarity with
+    the release year and rating of the movie.
+
+    Arguments
+    =========
+
+    year: float, the year of the movie
+
+    rating: float, the rating of the movie (out of 10)
+
+    cosine: float, the cosine similarity of the query against the movie context
+
+    cur_year, min_year: int, current year and minimum year (the lowest year)
+
+    year_weight, rating_weight: the weights for the year and rating
+
+    cosine_weight, y_r_weight: the weights for the cosine sim vs the year and rating value
+
+    Returns
+    =======
+
+    a new score that has been weighted with the year and rating of the movie
+    """
+
+    w_year = (((cur_year - min_year) - (cur_year - year)) / (cur_year - min_year)) * year_weight
+    w_rating = (rating / 10.0) * rating_weight
+    return ((w_year + w_rating) * y_r_weight) + (cosine * cosine_weight)
+
+
 class QuoteFinder:
     def __init__(self):
-        context_file = "jsons/final_context_1.json"
-        movie_file = "jsons/final_movies_1.json"
-        quote_file = "jsons/final_quotes_1.json"
-        year_rating_file = "jsons/final_year_rating_1.json"
+        context_file = "jsons/final_context.json"
+        movie_file = "jsons/final_movies.json"
+        quote_file = "jsons/final_quotes.json"
+        year_rating_file = "jsons/final_year_rating.json"
 
         self.context = read_file(context_file)
         self.movies = read_file(movie_file)
@@ -282,7 +352,7 @@ class QuoteFinder:
         self.word_count_dict = read_file(word_count_filename)
         self.pmi_dict = read_file(pmi_dict_filename)
 
-    def find_basic_cooccurance(self, word_list):
+    def find_basic_cooccurence(self, word_list):
         """ Initialize the base word co-occurrance list from our context and quotes.
 
         Arguments
@@ -307,11 +377,11 @@ class QuoteFinder:
                 new_quote_list.append(new_q)
         context_quotes = self.context + new_quote_list
 
-        # Find co occurances in context data, based co-occurances in a document
+        # Find co occurences in context data, based co-occurences in a document
         word_co = defaultdict(list)
         word_count_dict = defaultdict(int)
         for doc in context_quotes:
-            # Double loop to count word co-occurances
+            # Double loop to count word co-occurences
             tkns = self.tokenizer.tokenize(doc)
             for i in range(len(tkns)):
                 if tkns[i] not in stop_words:
@@ -321,108 +391,45 @@ class QuoteFinder:
                             word_co[tkns[i]] = update_word_counts(word_co[tkns[i]], tkns[j])
         return word_co, word_count_dict
 
-    def update_cooccurance(self, word_co, word_count_dict, word_list, docs):
+    def update_cooccurence(self, word_co_old, word_count_dict_old, word_list, docs):
         """ Updates the word co-occurrance mat and the word count dict with a new set of data.
-
+        
         Arguments
         =========
-
-        word_co: a word co-occurrance matrix in the form of a dictionary
-
-        word_count_dict: a dictionary that keeps track of the total occurances of a word
-
+    
+        word_co_old: a word co-occurrance matrix in the form of a dictionary
+        
+        word_count_dict_old: a dictionary that keeps track of the total occurences of a word
+        
         word_list: the list of words which are in our movie space
-
-        docs: the new docs we're using to update our word co-occurance
-
+        
+        docs: a list of new docs we're using to update our word co-occurence
+    
         Returns
         =======
-
-        word_co, word_count_dict : new word co-occurance dict/mat and new word count dictionary
+        
+        word_co, word_count_dict : new word co-occurence dict/mat and new word count dictionary
         """
         # Get English stop words
         stop_words = stopwords.words('english')
-
+        
+        # Make init dict
         word_co = defaultdict(list)
-        # Find co occurances in context data, based on document (content)
+        word_count_dict = defaultdict(int)
+        word_co.update(word_co_old)
+        word_count_dict.update(word_count_dict_old)
+        
+        # Find co occurences in context data, based on document (content)
         for doc in docs:
-            # Double loop to count word co-occurances
+            # Double loop to count word co-occurences
             tkns = self.tokenizer.tokenize(punct_strip(doc))
             for i in range(len(tkns)):
                 if tkns[i] not in stop_words:
+                    word_count_dict[tkns[i]] += 1
                     for j in range(len(tkns)):
-                        if not (j == i) and (tkns[j] in word_list):
+                        if not(j == i) and (tkns[j] in word_list):
                             word_co[tkns[i]] = update_word_counts(word_co[tkns[i]], tkns[j])
-        return word_co
-
-    def find_pmi(self, word_co, word_count_dict):
-        """ Calculate the pmi of a word based on the word co-occurances
-
-        Arguments
-        =========
-
-        word_co: a word occurrance matrix in the form of a dictionary
-
-        word_list: the list of words which are in our movie space
-
-        docs: the new docs we're using to update our word co-occurance
-
-        Returns
-        =======
-        pmi_dict = a dictionary like word_co but has the pmi's instead
-        """
-        # PMI(x,y) = log[p(x,y)/(p(x)*p(y))], assuming p(x,y) = co-occurances over total
-        pmi_dict = defaultdict(list)
-
-        # Find total
-        total = 0
-        for key in word_count_dict:
-            total += word_count_dict[key]
-        total += 1  # smoothing
-
-        # Caclulate PMIs
-        for key in word_co:
-            p_x = (word_count_dict[key] + 0.0) / total
-            pmi_list = []
-            lst = word_co[key]
-            for word, co in lst:
-                p_y = (word_count_dict[word] + 0.0) / total
-                p_x_y = (co + 0.0) / (word_count_dict[key] + 1.0 + word_count_dict[word])
-                res = math.log(p_x_y / (p_x * p_y + 1.0))
-                pmi_list.append((word, res))
-            pmi_dict[key] = pmi_list
-
-        return pmi_dict
-
-    def year_rating_weight(self, year, rating, cosine, cur_year=2016, min_year=1925, year_weight=0.3,
-                           rating_weight=0.7, cosine_weight=0.8, y_r_weight=0.2):
-        """ Compute new score with weighting from the cosine similarity with
-        the release year and rating of the movie.
-
-        Arguments
-        =========
-
-        year: float, the year of the movie
-
-        rating: float, the rating of the movie (out of 10)
-
-        cosine: float, the cosine similarity of the query against the movie context
-
-        cur_year, min_year: int, current year and minimum year (the lowest year)
-
-        year_weight, rating_weight: the weights for the year and rating
-
-        cosine_weight, y_r_weight: the weights for the cosine sim vs the year and rating value
-
-        Returns
-        =======
-
-        a new score that has been weighted with the year and rating of the movie
-        """
-
-        w_year = (((cur_year - min_year) - (cur_year - year)) / (cur_year - min_year)) * year_weight
-        w_rating = (rating / 10.0) * rating_weight
-        return ((w_year + w_rating) * y_r_weight) + (cosine * cosine_weight)
+        return word_co, word_count_dict
 
     def query_vectorize(self, q, sw=False):
         # Remove punctuation, lowercase, and encode to utf
@@ -458,7 +465,7 @@ class QuoteFinder:
 
         return query_tfidf, query_norm
 
-    def pseudo_rocchio(self, query, relevant, sw=False, a=.3, b=.4, clip=True):
+    def pseudo_rocchio(self, query_tfidf, query_norm, relevant, sw=False, a=.3, b=.4, clip=True):
         """
         Arguments:
             query: a string representing the name of the movie being queried for
@@ -479,9 +486,6 @@ class QuoteFinder:
         relevant_id = []
         for s, i in relevant:
             relevant_id.append(i)
-
-        # vectorize query
-        query_tfidf, query_norm = self.query_vectorize(query, sw)
 
         if query_norm == 0:
             return self.find_random()
@@ -568,16 +572,53 @@ class QuoteFinder:
         result_quotes = ["{} - {}".format(self.quotes[i], self.movies[i]) for _, i in results[:top_res_num]]
         return result_quotes
 
-    def find_final(self, q, rocchio=True, psuedo_rocchio_num=6, sw=False, pmi_num=10):
+    def find_final(self, q, rocchio=True, pseudo_rocchio_num=5, sw=False, pmi_num=8):
+        """
+        Arguments:
+            q: a string representing the query
+
+            rocchio: a boolean representing whether or not to use pseudo relevance feedback with Rocchio
+
+            psudo_rocchio_num: and int representing the number of top documents to consider relevant for rocchio
+
+            sw: a boolean on whether or not to include stop words.
+
+            pmi_num: an int representing the number of items to add to the query to expand it with PMI.
+
+        Returns:
+            result_quotes: a list of the top x results
+        """
+
         # Vectorize query
         query_tfidf, query_norm = self.query_vectorize(q, sw)
 
         if query_norm == 0:
-            return self.find_random()
+            return self.quotes(random.randint(0, len(self.quotes)))
 
         # Expand query using PMI
-        # Use the top x number of co-occurances to expand the query
+        # http://www.jofcis.com/publishedpapers/2011_7_1_17_24.pdf
+        pmi_expansion = defaultdict(float)
+        pmi_norm = 1
+        for word in query_tfidf:  # Sum PMI lists
+            if word in self.pmi_dict.keys():
+                pmi_list = self.pmi_dict[word][:pmi_num]
+                pmi_score_list = []
+                for word, score in pmi_list:
+                    pmi_expansion[word] += score
+                    pmi_score_list.append(score)
+                temp_norm = 0
+                for s in pmi_score_list:
+                    temp_norm += math.pow(s, 2)
+                temp_norm = math.sqrt(query_norm)
+                pmi_norm *= temp_norm
+        query_tfidf.update(pmi_expansion)
+        query_norm = query_norm * 2 * pmi_num * pmi_norm
 
+        # Find query norm
+        query_norm = 0
+        for word in query_tfidf:
+            query_norm += math.pow(query_tfidf[word], 2)
+        query_norm = math.sqrt(query_norm)
 
         # Get scores
         scores = [0 for _ in self.quotes]
@@ -597,14 +638,14 @@ class QuoteFinder:
             index = results[i][1]
             year = self.year_rating_dict[self.movies[i]][0]
             rating = self.year_rating_dict[self.movies[i]][1]
-            results[i] = (self.year_rating_weight(float(year), float(rating), score), index)
+            results[i] = (year_rating_weight(float(year), float(rating), score), index)
 
         # sort results
         results.sort(reverse=True)
 
         if rocchio:
             # Do pseudo-relevance feedback with Rocchio
-            mod_query = self.pseudo_rocchio(q, results[:psuedo_rocchio_num], sw)
+            mod_query = self.pseudo_rocchio(query_tfidf, query_norm, results[:pseudo_rocchio_num], sw)
             mod_query_norm = 0
             for word in mod_query:
                 mod_query_norm += math.pow(mod_query[word], 2)
@@ -628,10 +669,22 @@ class QuoteFinder:
                 index = results[i][1]
                 year = self.year_rating_dict[self.movies[i]][0]
                 rating = self.year_rating_dict[self.movies[i]][1]
-                results[i] = (self.year_rating_weight(float(year), float(rating), score), index)
+                results[i] = (year_rating_weight(float(year), float(rating), score), index)
 
         # Sort and return results
         top_res_num = 5
         results.sort(reverse=True)
-        result_quotes = ["{} - {}".format(self.quotes[i], self.movies[i]) for _, i in results[:top_res_num]]
+        used_quotes = []
+        return_res = []
+        counter = 0
+        while len(return_res) <= 5:  # Avoid duplicate quotes
+            score, i = results[counter]
+            if self.quotes[i] not in used_quotes:
+                used_quotes.append(self.quotes[i])
+                return_res.append((score, i))
+            else:
+                counter += 1
+
+        result_quotes = ["{} - {}".format(self.quotes[i].encode('utf-8'), self.movies[i].encode('utf-8')) for _, i in
+                         return_res[:top_res_num]]
         return result_quotes

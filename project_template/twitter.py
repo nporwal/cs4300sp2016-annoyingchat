@@ -29,7 +29,7 @@ def get_tweet():
 			except:
 				pass
 				#do nothing if status is a duplicate
-	return "Hi"
+	return "Processed Tweets."
 
 '''
 consumer_key = "hgxRhymigitU3bwHVf8jnNcP2"

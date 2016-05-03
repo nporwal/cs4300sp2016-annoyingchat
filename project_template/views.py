@@ -5,7 +5,6 @@ from .models import Docs
 from django.template import loader
 from .form import QueryForm
 from project_template import qf
-from project_template.twitter import get_tweet
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
@@ -33,6 +32,7 @@ def index(request):
             output = paginator.page(1)
         except EmptyPage:
             output = paginator.page(paginator.num_pages)
+    '''
     if request.GET.get('twitter'):
         twitter = request.GET.get('twitter')
         output_list = [get_tweet()]
@@ -44,6 +44,7 @@ def index(request):
             output = paginator.page(1)
         except EmptyPage:
             output = paginator.page(paginator.num_pages)
+    '''
     return render_to_response('project_template/index.html',
                           {'output': output,
                            'algorithm': algorithm,

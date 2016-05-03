@@ -38,7 +38,7 @@ def run():
 				if skip_tweet: continue
 				response = qf.find_final(text)[0][0]
 				m = "@%s %s" % (sn, response)
-				m = m[:140] if len(m) > 140 else m
+				m = (m[:137] + "...") if len(m) > 140 else m
 				try:				
 					s = api.update_status(m, s.id)
 					print "Found new tweet to reply to:\n%s" % text

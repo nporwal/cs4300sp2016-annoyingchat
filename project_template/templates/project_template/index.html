@@ -31,14 +31,22 @@
                         Random <input type="radio" name="algorithm" value="random" autocomplete='on' checked><br>
                         Trivial <input type="radio" name="algorithm" value="trivial" autocomplete='on'><br>
                         Final <input type="radio" name="algorithm" value="final"><br>
+                        ML <input type="radio" name="algorithm" value="ml" autocomplete='on'><br>
                     {% elif algorithm == 'trivial' %}
                         Random <input type="radio" name="algorithm" value="random" autocomplete='on'><br>
                         Trivial <input type="radio" name="algorithm" value="trivial" autocomplete='on' checked><br>
                         Final <input type="radio" name="algorithm" value="final"><br>
+                        ML <input type="radio" name="algorithm" value="ml" autocomplete='on'><br>
                     {% elif algorithm == 'final' %}
                         Random <input type="radio" name="algorithm" value="random" autocomplete='on'><br>
                         Trivial <input type="radio" name="algorithm" value="trivial" autocomplete='on'><br>
                         Final <input type="radio" name="algorithm" value="final" checked><br>
+                        ML <input type="radio" name="algorithm" value="ml" autocomplete='on'><br>
+                    {% elif algorithm == 'ml' %}
+                        Random <input type="radio" name="algorithm" value="random" autocomplete='on'><br>
+                        Trivial <input type="radio" name="algorithm" value="trivial" autocomplete='on'><br>
+                        Final <input type="radio" name="algorithm" value="final" autocomplete='on'><br>
+                        ML <input type="radio" name="algorithm" value="ml" checked><br>
                     {% endif %}                                      
                     
                 </div>
@@ -59,22 +67,16 @@
             <button type="submit" class="btn btn-info">Update Twitter </button>
         </form>
         -->
-        
+
         <div class="form-inline global-search">
-            {% if algorithm == 'final' %}
-                {% for line in output %}
-                    <br>
-                    <div style = "width: 800; margin: 0 auto; text-align: center">
-                        <br><span style="font-size: 150%; font-weight: bold">{{line.0}}</span><br>
-                        <em>From <span style="font-size: 120%; color: blue">"{{line.1}}"</span> in response to <span style="font-size: 120%; color:green">"{{line.2}}"</span></em><br>
-                    </div>
-                {% endfor %}
-            {% else %}     
-                <h4>Output</h4><br>
-                {% for line in output %}
-                    <br>{{line}}<br>
-                {% endfor %}
-            {% endif %}
+            {% for line in output %}
+                <br>
+                <div style="width: 800; margin: 0 auto; text-align: center">
+                    <br><span style="font-size: 150%; font-weight: bold">{{ line.0 }}</span><br>
+                    <em>From <span style="font-size: 120%; color: blue">"{{ line.1 }}"</span> in response to <span
+                            style="font-size: 120%; color:green">"{{ line.2 }}"</span></em><br>
+                </div>
+            {% endfor %}
 
 
             

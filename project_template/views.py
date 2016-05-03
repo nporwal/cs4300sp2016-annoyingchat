@@ -24,6 +24,8 @@ def index(request):
             output_list = qf.find_similar(search)
         elif algorithm == "final":
             output_list = qf.find_final(search)
+        elif algorithm == "ml":
+            output_list = qf.find_final(search, ml=True)
         paginator = Paginator(output_list, 10)
         page = request.GET.get('page')
         try:

@@ -8,6 +8,12 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import TreebankWordTokenizer
 from collections import defaultdict
+import nltk.classify.util
+from nltk.classify import NaiveBayesClassifier
+from nltk.corpus import subjectivity
+from nltk.sentiment import SentimentAnalyzer
+from nltk.sentiment.util import *
+import pickle
 
 # Download NLTK stopwords if you haven't already
 # nltk.download()
@@ -167,12 +173,15 @@ def quote_pruner(context, quotes, movies):
     """
     kill_sign = "asdf no good this quote is toodleloos"
     single_list = (".", "/", ":", ",", ";", "!", "?", "(", ")", '"', "-", "]", "'", "[", "#", "$",
-                  "well", "what", "why", "goodnight", "hello", "how", "no", "yes", "yep", "nope", "pick", "cigarette",
-                  "obviously", "kay", "scrappy", "good", "bad", "great", "goodbye", "who", "hoke", "yes'm", "come",
-                  "ouch", "huh", "shit", "ed", "fuck", "oh", "right", "ebay", "nothing", "me", "you", "mount", "pray", "sometimes",
-                  "really", "ditto", "jeez", "exactly", "bull", "bullshit", "yep", "bing", "38", "occupation", "pyscho", "ok",
-                  "okay", "ooh", "dance", "terrific", "cuban", "mexican", "but", "blue", "wood", "apples", "cider", "exactly",
-                  "david", "fire", "y'all", "so", "always", "hey")
+                   "well", "what", "why", "goodnight", "hello", "how", "no", "yes", "yep", "nope", "pick", "cigarette",
+                   "obviously", "kay", "scrappy", "good", "bad", "great", "goodbye", "who", "hoke", "yes'm", "come",
+                   "ouch", "huh", "shit", "ed", "fuck", "oh", "right", "ebay", "nothing", "me", "you", "mount", "pray",
+                   "sometimes",
+                   "really", "ditto", "jeez", "exactly", "bull", "bullshit", "yep", "bing", "38", "occupation",
+                   "pyscho", "ok",
+                   "okay", "ooh", "dance", "terrific", "cuban", "mexican", "but", "blue", "wood", "apples", "cider",
+                   "exactly",
+                   "david", "fire", "y'all", "so", "always", "hey")
 
     for x in range(len(quotes)):
         y = quotes[x].split()
@@ -275,12 +284,12 @@ def find_pmi(word_co, word_count_dict):
         p_x = (word_count_dict[key] + 0.0) / total
         pmi_list = []
         lst = word_co[key]
-        for word,co in lst:
+        for word, co in lst:
             p_y = (word_count_dict[word] + 0.0) / total
             p_x_y = (co + 0.0) / total
             res = math.log((p_x_y / (p_x * p_y)))
-            pmi_list.append((word,res))
-        pmi_list.sort(key=lambda tup:tup[1], reverse=True) # sort by second item, the pmi
+            pmi_list.append((word, res))
+        pmi_list.sort(key=lambda tup: tup[1], reverse=True)  # sort by second item, the pmi
         pmi_dict[key] = pmi_list
     return pmi_dict
 
@@ -318,6 +327,8 @@ def year_rating_weight(year, rating, cosine, cur_year=2016, min_year=1925, year_
 
 class QuoteFinder:
     def __init__(self):
+        self.sentim_analyzer = SentimentAnalyzer()
+        self.genre_dict = read_file("jsons/movie_genre_quote_dict_2.json")
         context_file = "jsons/final_context.json"
         movie_file = "jsons/final_movies.json"
         quote_file = "jsons/final_quotes.json"
@@ -427,7 +438,7 @@ class QuoteFinder:
                 if tkns[i] not in stop_words:
                     word_count_dict[tkns[i]] += 1
                     for j in range(len(tkns)):
-                        if not(j == i) and (tkns[j] in word_list):
+                        if not (j == i) and (tkns[j] in word_list):
                             word_co[tkns[i]] = update_word_counts(word_co[tkns[i]], tkns[j])
         return word_co, word_count_dict
 
@@ -533,10 +544,8 @@ class QuoteFinder:
             return q_mod
 
     def find_random(self):
-        result = []
         r = random.randint(0, len(self.quotes))
-        result.append(self.quotes[r] + " - \"" + self.movies[r] + "\"")
-        return result
+        return [[self.quotes[r], self.movies[r], self.context[r]]]
 
     def find_similar(self, query):
         query_words = self.tokenizer.tokenize(query)
@@ -569,10 +578,9 @@ class QuoteFinder:
 
         top_res_num = 5
         results.sort(reverse=True)
-        result_quotes = ["{} - {}".format(self.quotes[i], self.movies[i]) for _, i in results[:top_res_num]]
-        return result_quotes
+        return [[self.quotes[i], self.movies[i], self.context[i]] for _, i in results[:top_res_num]]
 
-    def find_final(self, q, rocchio=True, pseudo_rocchio_num=5, sw=False, pmi_num=8):
+    def find_final(self, q, rocchio=True, pseudo_rocchio_num=5, sw=False, pmi_num=8, ml=False):
         """
         Arguments:
             q: a string representing the query
@@ -664,6 +672,10 @@ class QuoteFinder:
                 if self.norms[i] != 0:
                     results.append((s / (self.norms[i] * mod_query_norm), i))
 
+            d_score_updates = {}
+            if ml is True:
+                d_score_updates = self.find_ml(q)
+
             # Weight scores with year and rating
             for i in range(len(results)):
                 score = results[i][0]
@@ -671,6 +683,8 @@ class QuoteFinder:
                 year = self.year_rating_dict[self.movies[i]][0]
                 rating = self.year_rating_dict[self.movies[i]][1]
                 results[i] = (year_rating_weight(float(year), float(rating), score), index)
+                if ml is True and index in d_score_updates:
+                    results[i] = (results[i][0]*0.9 + d_score_updates[index], results[i][1])
 
         # Sort and return results
         top_res_num = 5
@@ -689,3 +703,73 @@ class QuoteFinder:
         result_quotes = [[self.quotes[i], self.movies[i], self.context[i]] for _, i in
                          return_res[:top_res_num]]
         return result_quotes
+
+    def sentiment_analysis(self, td):
+        with open('jsons/all_words_neg.pickle', 'rb') as f:
+            all_words_neg = pickle.load(f)
+
+        with open('jsons/training_docs.pickle', 'rb') as f:
+            training_docs = pickle.load(f)
+
+        genres = ['action', 'crime', 'comedy', 'drama']
+        testing_docs = [(td, genre) for genre in genres]
+
+        all_words_neg = self.sentim_analyzer.all_words([mark_negation(doc) for doc in training_docs])
+        unigram_feats = self.sentim_analyzer.unigram_word_feats(all_words_neg, min_freq=4)
+        all_words_neg = self.sentim_analyzer.all_words([mark_negation(doc) for doc in training_docs])
+        self.sentim_analyzer.add_feat_extractor(extract_unigram_feats, unigrams=unigram_feats)
+        training_set = self.sentim_analyzer.apply_features(training_docs)
+        test_set = self.sentim_analyzer.apply_features(testing_docs)
+
+        trainer = NaiveBayesClassifier.train
+
+        classifier = self.sentim_analyzer.train(trainer, training_set)
+        # f = open('my_classifier_test.pickle', 'rb')
+        # classifier = pickle.load(f)
+        # f.close()
+
+        # classifier = nltk.data.load("my_classifier.pickle")
+
+        genre_accuracy = []
+
+        for key, value in sorted(self.sentim_analyzer.evaluate(test_set).items()):
+            # print('{0}: {1}'.format(key, value))
+            if key == 'Precision [action]':
+                genre_accuracy.append(('action', value))
+            if key == 'Precision [comedy]':
+                genre_accuracy.append(('comedy', value))
+            if key == 'Precision [drama]':
+                genre_accuracy.append(('drama', value))
+            if key == 'Precision [crime]':
+                genre_accuracy.append(('crime', value))
+
+        return genre_accuracy
+
+    # Takes in a query
+    # Outputs a dictionary of movie indices movies to weights where weight is to be added to all quote scores of movies
+    def find_ml(self, td):
+        f_tokenizer = TreebankWordTokenizer()
+        query_words = f_tokenizer.tokenize(td)
+        genres = self.sentiment_analysis(query_words)
+        weighted_genres = []
+        genre_weights = {}
+        for x in genres:
+            if x[1] is not None:
+                weighted_genres.append(x[0])
+                genre_weights[x[0]] = x[1]
+
+        d_score_updates = {}
+        for movie in self.movies:
+            g = self.genre_dict[movie][0]
+            total_genre_score = 0
+            if u'Comedy' in g and 'comedy' in weighted_genres:
+                total_genre_score += genre_weights['comedy']
+            if u'Action' in g and 'action' in weighted_genres:
+                total_genre_score += genre_weights['action']
+            if u'Crime' in g and 'crime' in weighted_genres:
+                total_genre_score += genre_weights['crime']
+            if u'Drama' in g and 'drana' in weighted_genres:
+                total_genre_score += genre_weights['drama']
+            d_score_updates[self.movies.index(movie)] = total_genre_score * .1
+
+        return d_score_updates

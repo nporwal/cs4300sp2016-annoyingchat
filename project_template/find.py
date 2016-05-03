@@ -286,7 +286,7 @@ def find_pmi(word_co, word_count_dict):
 
 
 def year_rating_weight(year, rating, cosine, cur_year=2016, min_year=1925, year_weight=0.3,
-                       rating_weight=0.7, cosine_weight=0.8, y_r_weight=0.2):
+                       rating_weight=0.7, cosine_weight=0.9, y_r_weight=0.1):
     """ Compute new score with weighting from the cosine similarity with
     the release year and rating of the movie.
 
@@ -593,7 +593,7 @@ class QuoteFinder:
         query_tfidf, query_norm = self.query_vectorize(q, sw)
 
         if query_norm == 0:
-            return self.quotes(random.randint(0, len(self.quotes)))
+            return self.find_random()
 
         # Expand query using PMI
         # http://www.jofcis.com/publishedpapers/2011_7_1_17_24.pdf
@@ -677,7 +677,7 @@ class QuoteFinder:
         used_quotes = []
         return_res = []
         counter = 0
-        while len(return_res) <= 5:  # Avoid duplicate quotes
+        while len(return_res) <= top_res_num:  # Avoid duplicate quotes
             score, i = results[counter]
             if self.quotes[i] not in used_quotes:
                 used_quotes.append(self.quotes[i])

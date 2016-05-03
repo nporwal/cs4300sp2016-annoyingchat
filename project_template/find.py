@@ -9,6 +9,13 @@ from nltk.corpus import stopwords
 from nltk.tokenize import TreebankWordTokenizer
 from collections import defaultdict
 
+import nltk.classify.util
+from nltk.classify import NaiveBayesClassifier
+from nltk.corpus import subjectivity
+from nltk.sentiment import SentimentAnalyzer
+from nltk.sentiment.util import *
+import pickle
+
 # Download NLTK stopwords if you haven't already
 # nltk.download()
 
@@ -284,7 +291,86 @@ def find_pmi(word_co, word_count_dict):
         pmi_dict[key] = pmi_list
     return pmi_dict
 
+#Takes in a query
+#Outputs a dictionary of movie indicesf_movies to weights where weight is to be added to all quote scores of f_movies
+def find_ml(td):
+    f_tokenizer = TreebankWordTokenizer()
+    query_words = f_tokenizer.tokenize(td) 
+    genres=sentiment_analysis(query_words)
+    weighted_genres = []
+    genre_weights = {}
+    for x in genres:
+        if x[1] is not None:
+            weighted_genres.append(x[0])
+            genre_weights[x[0]]=x[1]
 
+    genre_dict="movie_genre_quote_dict_2.json"
+
+    json_genre_dict=read_file(genre_dict)
+
+    f_genre_dict=json.loads(json.dumps(json_genre_dict))
+    
+    d_score_updates = {}
+    for movie in f_movies:
+        g=json_genre_dict[movie][0]
+        total_genre_score = 0
+        if u'Comedy' in g and 'comedy' in weighted_genres:
+            total_genre_score += genre_weights['comedy']
+        if u'Action' in g and 'action' in weighted_genres:
+            total_genre_score += genre_weights['action']
+        if u'Crime' in g and 'crime' in weighted_genres:
+            stotal_genre_score += genre_weights['crime']
+        if u'Drama' in g and 'drana' in weighted_genres:
+            total_genre_score += genre_weights['drama']
+        d_score_updates[f_movies.index(movie)] = total_genre_score*.1
+            
+    return d_score_updates
+	
+def sentiment_analysis(td):
+    f = open('all_words_neg.pickle', 'rb')
+    all_words_neg = pickle.load(f)
+    f.close()
+
+    f = open('training_docs.pickle', 'rb')
+    training_docs = pickle.load(f)
+    f.close()
+    genres = ['action','crime','comedy','drama']
+    testing_docs = [(td, genre) for genre in genres]
+
+
+    sentim_analyzer = SentimentAnalyzer()
+    all_words_neg = sentim_analyzer.all_words([mark_negation(doc) for doc in training_docs])
+    unigram_feats = sentim_analyzer.unigram_word_feats(all_words_neg, min_freq=4)
+    all_words_neg = sentim_analyzer.all_words([mark_negation(doc) for doc in training_docs])
+    sentim_analyzer.add_feat_extractor(extract_unigram_feats, unigrams=unigram_feats)
+    training_set = sentim_analyzer.apply_features(training_docs)
+    test_set = sentim_analyzer.apply_features(testing_docs)
+
+    trainer = NaiveBayesClassifier.train
+
+    classifier = sentim_analyzer.train(trainer, training_set)
+    #f = open('my_classifier_test.pickle', 'rb')
+    #classifier = pickle.load(f)
+    #f.close()
+
+    #classifier = nltk.data.load("my_classifier.pickle")
+    
+    genre_accuracy=[]
+    
+    for key,value in sorted(sentim_analyzer.evaluate(test_set).items()):
+        #print('{0}: {1}'.format(key, value))
+        if key == 'Precision [action]':
+            genre_accuracy.append(('action', value))
+        if key == 'Precision [comedy]':
+            genre_accuracy.append(('comedy', value))
+        if key == 'Precision [drama]':
+            genre_accuracy.append(('drama', value))
+        if key == 'Precision [crime]':
+            genre_accuracy.append(('crime', value))
+    
+
+    return genre_accuracy
+	
 def year_rating_weight(year, rating, cosine, cur_year=2016, min_year=1925, year_weight=0.3,
                        rating_weight=0.7, cosine_weight=0.9, y_r_weight=0.1):
     """ Compute new score with weighting from the cosine similarity with
@@ -572,7 +658,7 @@ class QuoteFinder:
         result_quotes = ["{} - {}".format(self.quotes[i], self.movies[i]) for _, i in results[:top_res_num]]
         return result_quotes
 
-    def find_final(self, q, rocchio=True, pseudo_rocchio_num=5, sw=False, pmi_num=8):
+    def find_final(self, q, rocchio=True, pseudo_rocchio_num=5, sw=False, pmi_num=8, ml=False):
         """
         Arguments:
             q: a string representing the query
@@ -664,6 +750,10 @@ class QuoteFinder:
                 if self.norms[i] != 0:
                     results.append((s / (self.norms[i] * mod_query_norm), i))
 
+			d_score_updates = {}
+            if ml is True:
+                d_score_updates = find_ml(query)
+					
             # Weight scores with year and rating
             for i in range(len(results)):
                 score = results[i][0]
@@ -671,7 +761,9 @@ class QuoteFinder:
                 year = self.year_rating_dict[self.movies[i]][0]
                 rating = self.year_rating_dict[self.movies[i]][1]
                 results[i] = (year_rating_weight(float(year), float(rating), score), index)
-
+                if ml is True and index in d_score_updates:
+                    results[i] = (results[i][0] + d_score_updates[index], results[i][1])
+				
         # Sort and return results
         top_res_num = 5
         results.sort(reverse=True)

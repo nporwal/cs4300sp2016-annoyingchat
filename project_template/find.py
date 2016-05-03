@@ -678,7 +678,7 @@ class QuoteFinder:
         used_quotes = []
         return_res = []
         counter = 0
-        while len(return_res) <= 5:  # Avoid duplicate quotes
+        while len(return_res) <= top_res_num:  # Avoid duplicate quotes
             score, i = results[counter]
             if self.quotes[i] not in used_quotes:
                 used_quotes.append(self.quotes[i])
